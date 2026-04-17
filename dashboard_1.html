@@ -366,7 +366,10 @@
 
   <!-- Table (moved above charts) -->
   <div class="card section-gap">
-    <div class="card-title">目標明細</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+      <div class="card-title" style="margin-bottom:0;">目標明細</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;" id="tablePersonTabs"></div>
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
@@ -391,6 +394,10 @@
       <div class="card-title">目標達成比例</div>
       <div style="position:relative; height:210px;">
         <canvas id="pieChart" role="img" aria-label="目標達成與未達成比例圓餅圖">目標達成比例圖</canvas>
+        <div id="pieCenterText" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+          <div id="piePct" style="font-size:28px; font-weight:700; color:#065F5C; line-height:1;">—</div>
+          <div style="font-size:11px; font-weight:600; color:#4A7A79; margin-top:3px; letter-spacing:0.04em;">達成率</div>
+        </div>
       </div>
       <div class="pie-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#0ABAB5"></div>已達成</div>
@@ -442,6 +449,7 @@ let filtered = [];
 let pieChartInstance = null;
 let monthlyChartInstance = null;
 let selectedPerson = '__ALL__';
+let tablePersonFilter = '__ALL__';
 
 const FIXED_URL = 'https://docs.google.com/spreadsheets/d/1xvOQnnqN5J-TITB4QTz-9KHwdbnE7t24ixeSp6MzSuY/edit?usp=sharing';
 let currentUrl = FIXED_URL;
@@ -451,7 +459,7 @@ const C_TIFFANY_DK = '#065F5C';
 const C_RED       = '#E05A5A';
 const C_TIFFANY_MID = '#088A86';
 
-const PALETTE = ['#0ABAB5','#088A86','#065F5C','#5DD6D3','#35C8C4','#B2E8E7','#2EA8A4'];
+const PALETTE = ['#0ABAB5', '#F59E0B', '#6366F1', '#10B981', '#8B5CF6', '#F97316', '#0EA5E9'];
 
 function toggleEdit() {
   const editRow = document.getElementById('editRow');
@@ -579,6 +587,7 @@ function render() {
   document.getElementById('m-rate').textContent = rate + '%';
   document.getElementById('m-persons').textContent = persons.length;
 
+  renderTablePersonTabs(persons);
   renderTable();
   renderPie(done, fail);
   renderPersonBars(persons);
@@ -588,6 +597,9 @@ function render() {
 }
 
 function renderPie(done, fail) {
+  const total = done + fail;
+  const rate = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('piePct').textContent = rate + '%';
   const ctx = document.getElementById('pieChart').getContext('2d');
   if (pieChartInstance) pieChartInstance.destroy();
   pieChartInstance = new Chart(ctx, {
@@ -597,7 +609,7 @@ function renderPie(done, fail) {
       datasets: [{ data: [done, fail], backgroundColor: [C_TIFFANY, C_RED], borderWidth: 0 }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => ' ' + ctx.label + '：' + ctx.raw + ' 筆' } }
@@ -783,10 +795,30 @@ function showToasts(persons) {
   next();
 }
 
+function renderTablePersonTabs(persons) {
+  const wrap = document.getElementById('tablePersonTabs');
+  if (!wrap) return;
+  wrap.innerHTML =
+    `<button class="person-tab person-tab-all ${tablePersonFilter === '__ALL__' ? 'active' : ''}" onclick="selectTablePerson('__ALL__')">全部</button>` +
+    persons.map(p =>
+      `<button class="person-tab ${tablePersonFilter === p ? 'active' : ''}" onclick="selectTablePerson('${p}')">${p}</button>`
+    ).join('');
+}
+
+function selectTablePerson(p) {
+  tablePersonFilter = p;
+  const persons = [...new Set(filtered.map(r => r.person).filter(Boolean))];
+  renderTablePersonTabs(persons);
+  renderTable();
+}
+
 function renderTable() {
   const tbody = document.getElementById('tableBody');
-  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">沒有符合條件的資料</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(r => {
+  const rows = tablePersonFilter === '__ALL__'
+    ? filtered
+    : filtered.filter(r => r.person === tablePersonFilter);
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">沒有符合條件的資料</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => {
     const ok = isAchieved(r);
     return `<tr>
       <td style="font-weight:600;">${r.deadline || '—'}</td>
