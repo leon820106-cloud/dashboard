@@ -831,7 +831,7 @@ function renderTable() {
       <td class="truncate" title="${r.name}">${r.name || '—'}</td>
       <td style="font-weight:600;">${r.person || '—'}</td>
       <td><span class="badge ${ok ? 'badge-ok' : 'badge-ng'}">${r.achieved || '—'}</span></td>
-      <td class="truncate" title="${r.note}" style="color:var(--text-2); font-size:12px;">${r.note || '—'}</td>
+      <td style="color:var(--text-2); font-size:12px; word-break:break-all; white-space:normal; line-height:1.6;">${r.note || '—'}</td>
     </tr>`;
   }).join('');
 }
